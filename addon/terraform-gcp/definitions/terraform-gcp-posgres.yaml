@@ -1,0 +1,183 @@
+apiVersion: core.oam.dev/v1alpha2
+kind: ComponentDefinition
+metadata:
+  name: gcp-postgres
+  annotations:
+    definition.oam.dev/description: Terraform configuration for GCP Cloud SQL object
+  labels:
+    type: terraform
+spec:
+  workload:
+    definition:
+      apiVersion: terraform.core.oam.dev/v1beta1
+      kind: Configuration
+  schematic:
+    terraform:
+      configuration: |
+        provider "google" {
+
+            #Required, The ID of the project in which resources will be provisioned.
+          #project     = var.project
+
+            #Required, The region of the Cloud SQL resources.
+          region      = local.region_map[var.region]
+        }
+
+        provider "google-beta" {
+
+            #Required, The ID of the project in which resources will be provisioned.
+          #project     = var.project
+
+            #Required, The region of the Cloud SQL resources.
+          region      = local.region_map[var.region]
+        }
+
+
+        locals {
+          
+          region_map = {
+            europe   = "europe-west4"
+            us = "us-central1"
+          }
+
+          tier_map = {
+            small = "db-f1-micro"
+            medium = "db-custom-2-3750"
+            large = "db-custom-4-26000"
+          }
+
+        }
+
+        #-------------------------------------------POSTGRES Database---------------------------------------------------#
+
+        resource "random_id" "suffix" {
+          byte_length = 4
+        }
+
+        data "google_compute_network" "my-network"{
+          name = var.vpc_ref
+        }
+
+        # Reserve global internal address range for the peering
+        resource "google_compute_global_address" "private_ip_address" {
+          provider      = google-beta
+          name          = "private-ip-block"
+          purpose       = "VPC_PEERING"
+          address_type  = "INTERNAL"
+          prefix_length = 16
+          network       = data.google_compute_network.my-network.self_link
+        }
+
+        # Establish VPC network peering connection using the reserved address range
+        resource "google_service_networking_connection" "private_vpc_connection" {
+          provider                = google-beta
+          network                 = data.google_compute_network.my-network.self_link
+          service                 = "servicenetworking.googleapis.com"
+          reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
+        }
+
+        resource "google_sql_database_instance" "master" {
+          name = "postgres-instance-${random_id.suffix.hex}"
+          database_version = "POSTGRES_9_6"
+          #project =var.project
+          region = local.region_map[var.region]
+          deletion_protection = var.deletion_protection
+          settings {
+            tier = local.tier_map[var.instance_tier]
+            disk_size = var.storage_size
+            availability_type = var.availability_type
+            
+            ip_configuration {
+              ipv4_enabled    = false
+              private_network = data.google_compute_network.my-network.id
+            }
+
+         }
+        }
+
+        resource "google_sql_user" "default" {
+          name       = var.db_admin_username
+          #project    = var.project
+          instance   = google_sql_database_instance.master.name
+          password   = var.db_admin_password
+          depends_on = [google_sql_database_instance.master]
+        }
+
+        resource "google_sql_database" "default" {
+          name       = var.db_name
+          #project    = var.project
+          instance   = google_sql_database_instance.master.name
+          depends_on = [google_sql_database_instance.master]
+        }
+
+
+        ################VARS
+
+        variable "project"{
+          type=string
+          default="open-application-model"
+        }
+
+        variable "region"{
+          type=string
+          default="europe"
+        }
+
+        variable "availability_type"{
+          type=string
+          default="ZONAL"
+        }
+
+        variable "instance_tier"{
+          type=string
+          default="small"
+        }
+
+        variable "deletion_protection"{
+          default=false
+        }
+
+        variable "db_admin_username"{
+          type=string
+          default="scrum"
+        }
+
+        variable "db_admin_password"{
+          type=string
+          default="password"
+        }
+
+        variable "db_name"{
+          type=string
+          default="scrum"
+        }
+
+        variable "storage_size"{
+          type=string
+          default=10
+        }
+
+        variable "vpc_ref"{
+          type=string
+          default="vela-vpc"
+        }
+
+        ########################OUTPUT
+
+
+        output db_endpoint {
+          value = "${google_sql_database_instance.master.private_ip_address}:5432"
+        }
+
+        output db_name {
+          value = google_sql_database.default.name
+        }
+
+        output db_password {
+          value = google_sql_user.default.password
+          sensitive = true
+        }
+
+      providerRef:
+        name: gcp
+        namespace: default 
