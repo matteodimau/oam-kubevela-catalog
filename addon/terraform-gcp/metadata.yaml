@@ -1,0 +1,15 @@
+name: terraform-gcp
+version: 1.0.0
+description: Kubernetes Terraform Controller for GCP
+icon: https://static.kubevela.net/images/logos/aws.png
+url: https://registry.terraform.io/providers/hashicorp/gcp/latest
+
+tags:
+  - terraform provider
+
+deployTo:
+  control_plane: true
+  runtime_cluster: false
+
+dependencies:
+- name: terraform
