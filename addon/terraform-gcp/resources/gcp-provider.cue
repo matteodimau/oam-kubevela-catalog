@@ -1,23 +1,23 @@
 output: {
-	type: "raw"
-	properties: {
-		apiVersion: "terraform.core.oam.dev/v1beta1"
-		kind:       "Provider"
-		metadata: {
-			name:      "gcp"
-			namespace: "default"
-		}
-		spec: {
-			provider: "gcp"
-			region:   parameter.GCP_DEFAULT_REGION
-			credentials: {
-				source: "Secret"
-				secretRef: {
-					namespace: "vela-system"
-					name:      "gcp-account-creds"
-					key:       "credentials"
-				}
-			}
-		}
-	}
+        type: "raw"
+        properties: {
+                apiVersion: "terraform.core.oam.dev/v1beta1"
+                kind:       "Provider"
+                metadata: {
+                        name:      "gcp"
+                        namespace: "default"
+                }
+                spec: {
+                        provider: "gcp"
+                        region:   parameter.GCP_DEFAULT_REGION
+                        credentials: {
+                                source: "Secret"
+                                secretRef: {
+                                        namespace: "vela-system"
+                                        name:      "gcp-account-creds"
+                                        key:       "credentials"
+                                }
+                        }
+                }
+        }
 }
