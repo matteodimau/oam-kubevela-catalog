@@ -14,6 +14,6 @@ output: {
         }
 }
 
-creds1: "gcpCredentialsJSON: " + paremeter.GCP_CREDS_JSON
-creds2: "gcpProject: " + paremeter.GCP_PROJECT
+creds1: "gcpCredentialsJSON: " + parameter.GCP_CREDS_JSON
+creds2: "gcpProject: " + parameter.GCP_PROJECT
 
