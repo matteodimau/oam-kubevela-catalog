@@ -1,4 +1,4 @@
-name: terraform-gcp
+name: test-addon
 version: 1.0.0
 description: Kubernetes Terraform Controller for GCP
 icon: https://static.kubevela.net/images/logos/aws.png
